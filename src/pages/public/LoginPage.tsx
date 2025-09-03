@@ -4,11 +4,14 @@ import {
   Button,
   CircularProgress,
   Container,
+  IconButton,
+  InputAdornment,
   Paper,
   TextField,
   Typography,
 } from '@mui/material';
-import { useActionState } from 'react';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { useActionState, useState } from 'react';
 import { shemaLogin, type LoginFormValues } from '../../models';
 import type { ActionState } from '../../interfaces';
 import { createInitialState, hanleZodError } from '../../helpers';
@@ -35,15 +38,46 @@ export const LoginPage = () => {
     };
     try {
       shemaLogin.parse(rawData);
-      //await delay(3000);
-      const response = await axios.post('/login', rawData);
-      if (!response?.data?.token) throw new Error('No existe el token');
-      login(response.data.token, { username: rawData.username });
-      navigate('/perfil');
+
+      // Log the request data for debugging
+      console.log('Login attempt with username:', rawData.username);
+
+      try {
+        const response = await axios.post('/login', {
+          username: rawData.username,
+          password: rawData.password
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('Login response:', response);
+
+        if (!response?.data?.token) {
+          throw new Error('No se recibió un token de autenticación');
+        }
+
+        login(response.data.token, { username: rawData.username });
+        navigate('/perfil');
+      } catch (error: any) {
+        console.error('Login error:', error);
+        console.error('Error response:', error.response?.data);
+
+        let errorMessage = 'Error al iniciar sesión';
+        if (error.response?.status === 403) {
+          errorMessage = 'Acceso denegado. Usuario o contraseña incorrectos.';
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+
+        showAlert(errorMessage, 'error');
+        throw error; // Re-throw to be caught by the outer catch
+      }
     } catch (error) {
       const err = hanleZodError<LoginFormValues>(error, rawData);
-      console.log('err', err);
-      showAlert(err.message, 'error');
+      console.log('Validation error:', err);
+      showAlert(err.message || 'Error de validación', 'error');
       return err;
     }
   };
@@ -52,6 +86,9 @@ export const LoginPage = () => {
     loginApi,
     initialState
   );
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleClickShowPassword = () => setShowPassword((show: boolean) => !show);
 
   return (
     <Container
@@ -108,8 +145,23 @@ export const LoginPage = () => {
               required
               fullWidth
               label="Password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
+              id="password"
+              autoComplete="current-password"
               disabled={isPending}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleClickShowPassword}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
               defaultValue={state?.formData?.password}
               error={!!state?.errors?.password}
               helperText={state?.errors?.password}

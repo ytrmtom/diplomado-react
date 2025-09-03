@@ -3,6 +3,7 @@ import { LoginPage, NotFoundPage, UserPage } from '../pages/public';
 import { PublicRoute } from './PublicRouter';
 import { PrivateLayout } from '../layouts/PrivateLayout';
 import { PerfilPage, TasksPage } from '../pages/private';
+import { UsersPage } from '../pages/private/UsersPage';
 
 export const AppRouter = () => {
   return (
@@ -17,6 +18,7 @@ export const AppRouter = () => {
         <Route element={<PrivateLayout />}>
           <Route path="/perfil" element={<PerfilPage />}></Route>
           <Route path="/tasks" element={<TasksPage />}></Route>
+          <Route path="/users" element={<UsersPage />}></Route>
         </Route>
 
         <Route path="*" element={<NotFoundPage />}></Route>
