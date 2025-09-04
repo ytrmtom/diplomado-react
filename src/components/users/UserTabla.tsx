@@ -46,8 +46,8 @@ export const UserTabla = ({
             width: 150,
             renderCell: (params: GridRenderCellParams) => (
                 <Chip
-                    label={params.value === true ? 'Activo' : 'Inactivo'}
-                    color={params.value === true ? 'success' : 'warning'}
+                    label={params.value === true || params.value === 'active' ? 'Activo' : 'Inactivo'}
+                    color={params.value === true || params.value === 'active' ? 'success' : 'warning'}
                     size="small"
                     variant="outlined"
                 />
@@ -69,15 +69,15 @@ export const UserTabla = ({
 
                     <Tooltip
                         title={
-                            params.row.status === true ? 'Desactivar usuario' : 'Activar usuario'
+                            params.row.status === true || params.row.status === 'active' ? 'Desactivar usuario' : 'Activar usuario'
                         }
                     >
                         <IconButton
                             size="small"
-                            color={params.row.status === true ? 'warning' : 'success'}
-                            onClick={() => handleDone(params.row.id, !params.row.status)}
+                            color={params.row.status === true || params.row.status === 'active' ? 'warning' : 'success'}
+                            onClick={() => handleDone(params.row.id, params.row.status === true || params.row.status === 'active')}
                         >
-                            {params.row.status === true ? (
+                            {params.row.status === true || params.row.status === 'active' ? (
                                 <UndoIcon fontSize="small" />
                             ) : (
                                 <DoneIcon fontSize="small" />

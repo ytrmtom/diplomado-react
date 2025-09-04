@@ -47,9 +47,9 @@ export const UsersPage = () => {
                 search
             };
 
-            // Solo agregar el parámetro done si no es 'all'
+            // Solo agregar el parámetro status si no es 'all'
             if (filterStatus !== 'all') {
-                params.done = filterStatus === 'true';
+                params.status = filterStatus === 'true' ? 'active' : 'inactive';
             }
 
             const response = await axios.get('/users', { params });
@@ -118,73 +118,71 @@ export const UsersPage = () => {
     };
 
     const handleDone = async (id: number, currentStatus: boolean) => {
-        const action = currentStatus ? 'desactivar' : 'activar';
-        const confirmed = window.confirm(
-            `¿Estás seguro de que quieres ${action} este usuario?`
-        );
-        if (!confirmed) return;
-
         try {
-            const newStatus = currentStatus ? 'inactive' : 'active';
-            console.log(`Updating user ${id} status to:`, newStatus);
+            // First, fetch the current user data from the server
+            const { data: currentUser } = await axios.get(`/users/${id}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            const newStatus = !currentStatus;
+            const newStatusStr = newStatus ? 'active' : 'inactive';
             
-            // First, try to get the user's current data to understand the expected format
-            const { data: userData } = await axios.get(`/users/${id}`);
-            console.log('Current user data:', userData);
-            
-            // Prepare the payload based on the user data structure
-            let payload;
-            
-            // Check different possible status fields in the user data
-            if ('status' in userData) {
-                payload = { status: newStatus };
-            } else if ('isActive' in userData) {
-                payload = { isActive: !currentStatus };
-            } else if ('active' in userData) {
-                payload = { active: !currentStatus };
-            } else {
-                // Default to status if we can't determine the field
-                payload = { status: newStatus };
+            // Check if the status is already what we want to set
+            if (currentUser.status === newStatusStr) {
+                showAlert(`El usuario ya está ${newStatus ? 'activo' : 'inactivo'}`, 'info');
+                return;
             }
+
+            const action = newStatus ? 'activar' : 'desactivar';
+            const confirmed = window.confirm(
+                `¿Estás seguro de que quieres ${action} este usuario?`
+            );
+            if (!confirmed) return;
+
+            console.log(`Toggling user ${id} status from ${currentUser.status} to:`, newStatusStr);
             
-            console.log('Using payload:', payload);
+            // Update the UI optimistically
+            const updatedUsers = users.map(user => 
+                user.id === id 
+                    ? { ...user, status: newStatusStr } 
+                    : user
+            );
+            setUsers(updatedUsers);
             
-            // Make the update request with the determined payload
+            // Send the update to the server
+            const payload = { status: newStatusStr };
+            
             await axios.patch(
                 `/users/${id}`,
                 payload,
                 {
                     headers: {
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
                 }
             );
             
-            showAlert('Estado del usuario actualizado correctamente', 'success');
-            listUserApi();
-            
+            showAlert(`Usuario ${action}do correctamente`, 'success');
+            listUserApi(); // Refresh the list to ensure consistency
+                
         } catch (error: unknown) {
             console.error('Error updating user status:', error);
+            listUserApi(); // Refresh the list to ensure UI consistency
             
             let errorMessage = 'Error al actualizar el estado del usuario. Por favor, intente nuevamente.';
             
             if (error && typeof error === 'object' && 'response' in error) {
                 const response = error.response as any;
-                console.error('Error response:', {
-                    status: response?.status,
-                    data: response?.data,
-                    headers: response?.headers
-                });
                 
-                if (response?.data?.message) {
-                    errorMessage = response.data.message;
-                } else if (response?.data?.error) {
-                    errorMessage = response.data.error;
+                if (response?.status === 409) {
+                    errorMessage = 'El estado del usuario ha cambiado. Se ha actualizado la lista.';
+                } else if (response?.status === 401) {
+                    errorMessage = 'No autorizado. Por favor, inicie sesión nuevamente.';
                 } else if (response?.status === 400) {
                     errorMessage = 'Solicitud incorrecta. Verifique los datos e intente nuevamente.';
-                } else if (response?.status === 409) {
-                    errorMessage = 'Conflicto: El usuario ya tiene este estado.';
                 }
             }
             

@@ -65,11 +65,11 @@ export const UserFilter = ({
                     <Select
                         value={filterStatus}
                         label="Estado"
-                        onChange={(e) => setFilterStatus(e.target.value)}
+                        onChange={(e) => setFilterStatus(e.target.value as UserFilterDoneType)}
                     >
-                        <MenuItem value="all">Todas</MenuItem>
-                        <MenuItem value="true">Activo</MenuItem>
-                        <MenuItem value="false">Inactivo</MenuItem>
+                        <MenuItem value="all">Todos</MenuItem>
+                        <MenuItem value="true">Activos</MenuItem>
+                        <MenuItem value="false">Inactivos</MenuItem>
                     </Select>
                 </FormControl>
             </Toolbar>
